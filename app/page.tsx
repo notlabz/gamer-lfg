@@ -315,14 +315,14 @@ export default function Home() {
       return;
     }
 
-    const memberIds = Array.isArray(lobby.member_ids) ? lobby.member_ids : [];
+    const memberIds = lobby.member_ids || [];
     if (memberIds.includes(user.id)) {
       router.push(`/lobby/${lobby.id}`);
       return;
     }
 
-    const currentPlayers = Number(lobby.current_players ?? 0);
-    const maxPlayers = Number(lobby.max_players ?? 0);
+    const currentPlayers = Number(lobby.current_players || 1);
+    const maxPlayers = Number(lobby.max_players || 0);
     if (
       !Number.isFinite(currentPlayers) ||
       !Number.isFinite(maxPlayers) ||
@@ -332,8 +332,8 @@ export default function Home() {
       return;
     }
 
-    const nextPlayers = currentPlayers + 1;
-    const nextMemberIds = [...memberIds, user.id];
+    const nextPlayers = Number(lobby.current_players || 1) + 1;
+    const nextMemberIds = [...(lobby.member_ids || []), user.id];
     const previousLobbies = lobbies;
     setJoinError(null);
     setJoiningLobbyId(lobby.id);
@@ -618,11 +618,15 @@ export default function Home() {
                       </button>
                     )
                   )}
-                  {isHost ? (
-                    <span className="block border border-emerald-400/50 px-4 py-3 text-center text-sm font-semibold text-emerald-400">
-                      Host Lobby
-                    </span>
-                  ) : isSquadFull && !hasJoined ? (
+                  {isHost || hasJoined ? (
+                    <button
+                      className="block w-full border border-emerald-400/50 px-4 py-3 text-sm font-semibold text-emerald-400 transition-colors hover:bg-emerald-400 hover:text-zinc-950"
+                      onClick={() => router.push(`/lobby/${lobby.id}`)}
+                      type="button"
+                    >
+                      View Squad
+                    </button>
+                  ) : isSquadFull ? (
                     <span className="block bg-zinc-700 px-4 py-3 text-center text-sm font-semibold text-zinc-400">
                       Squad Full
                     </span>
@@ -631,11 +635,7 @@ export default function Home() {
                       className="block w-full bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-emerald-300 disabled:cursor-wait disabled:opacity-60"
                       disabled={joiningLobbyId === lobby.id}
                       onClick={() => {
-                        if (hasJoined) {
-                          router.push(`/lobby/${lobby.id}`);
-                        } else {
-                          void handleJoin(lobby);
-                        }
+                        void handleJoin(lobby);
                       }}
                       type="button"
                     >
