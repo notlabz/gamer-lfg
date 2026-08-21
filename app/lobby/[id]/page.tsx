@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/client";
@@ -53,6 +53,7 @@ export default function SquadPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -141,6 +142,10 @@ export default function SquadPage() {
     };
   }, [params.id]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   async function handleSendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || !id || !messageInput.trim()) return;
@@ -224,12 +229,12 @@ export default function SquadPage() {
             </dl>
           </section>
 
-          <section className="flex min-h-[520px] flex-col border border-zinc-800 bg-zinc-900 p-5">
-            <div>
+          <section className="flex h-[calc(100vh-250px)] min-h-[500px] max-h-[700px] flex-col border border-zinc-800 bg-zinc-900 p-5">
+            <div className="shrink-0">
               <h2 className="text-lg font-semibold">Squad Chat</h2>
               <p className="mt-1 text-sm text-zinc-500">Coordinate your next match.</p>
             </div>
-            <div className="mt-5 flex-1 space-y-3 overflow-y-auto border-y border-zinc-800 py-4">
+            <div className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto border-y border-zinc-800 px-1 py-4 [scrollbar-color:#52525b_#18181b] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-600 [&::-webkit-scrollbar-track]:bg-zinc-950">
               {messages.length === 0 && <p className="text-sm text-zinc-500">No messages yet.</p>}
               {messages.map((chatMessage) => (
                 <article className="border border-zinc-800 bg-zinc-950 p-3" key={chatMessage.id}>
@@ -251,8 +256,9 @@ export default function SquadPage() {
                   <p className="mt-1 text-sm text-zinc-200">{chatMessage.message}</p>
                 </article>
               ))}
+              <div ref={messagesEndRef} />
             </div>
-            <form className="mt-4 flex gap-3" onSubmit={handleSendMessage}>
+            <form className="mt-4 flex shrink-0 gap-3" onSubmit={handleSendMessage}>
               <input
                 className="min-w-0 flex-1 border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-400"
                 onChange={(event) => setMessageInput(event.target.value || "")}
