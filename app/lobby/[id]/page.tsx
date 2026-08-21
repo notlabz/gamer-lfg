@@ -146,19 +146,9 @@ export default function SquadPage() {
     if (!user || !id || !messageInput.trim()) return;
 
     const messageText = messageInput.trim();
-    const optimisticMessage: LobbyMessage = {
-      id: `optimistic-${Date.now()}`,
-      lobby_id: id,
-      user_id: user.id,
-      user_email: user.email,
-      message: messageText,
-      created_at: new Date().toISOString(),
-    };
 
     setSending(true);
     setError(null);
-    setMessages((current) => [...current, optimisticMessage]);
-    setMessageInput("");
 
     const { error: sendError } = await supabase.from("lobby_messages").insert({
       lobby_id: id,
@@ -168,14 +158,12 @@ export default function SquadPage() {
     });
 
     if (sendError) {
-      setMessages((current) =>
-        current.filter((message) => message.id !== optimisticMessage.id),
-      );
       setError(sendError.message);
       setSending(false);
       return;
     }
 
+    setMessageInput("");
     setSending(false);
   }
 
