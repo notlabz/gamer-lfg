@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/client";
@@ -41,6 +48,54 @@ function displayName(profile: Profile | undefined, userId: string) {
   return profile?.display_name || profile?.username || profile?.email || userId;
 }
 
+function renderMessageContent(content: string): ReactNode[] {
+  const parts = content.split(/(https?:\/\/[^\s]+)/g);
+  const rendered: ReactNode[] = [];
+
+  parts.forEach((part, index) => {
+    if (!part) return;
+    if (!/^https?:\/\//i.test(part)) {
+      rendered.push(<span key={`text-${index}`}>{part}</span>);
+      return;
+    }
+
+    const rawUrl = part;
+    const cleanUrl = rawUrl.replace(/[.,!?;:)\]]+$/, "");
+    const trailingText = rawUrl.slice(cleanUrl.length);
+    const isImage =
+      /\.(png|jpe?g|gif|webp)(?:[?#].*)?$/i.test(cleanUrl) ||
+      /(?:giphy\.com|tenor\.com)/i.test(cleanUrl);
+
+    rendered.push(
+      isImage ? (
+        <span className="my-2 block" key={`image-${index}`}>
+          <a href={cleanUrl} rel="noreferrer" target="_blank">
+            <img
+              alt="Shared chat attachment"
+              className="max-h-72 max-w-full rounded-lg object-contain"
+              loading="lazy"
+              src={cleanUrl}
+            />
+          </a>
+        </span>
+      ) : (
+        <a
+          className="text-emerald-400 underline hover:text-emerald-300"
+          href={cleanUrl}
+          key={`link-${index}`}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {cleanUrl}
+        </a>
+      ),
+    );
+    if (trailingText) rendered.push(<span key={`trailing-${index}`}>{trailingText}</span>);
+  });
+
+  return rendered;
+}
+
 export default function SquadPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -54,6 +109,8 @@ export default function SquadPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -172,6 +229,49 @@ export default function SquadPage() {
     setSending(false);
   }
 
+  async function handleFileSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !user || !id) return;
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const filePath = `${id}/${crypto.randomUUID()}-${safeFileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("chat-attachments")
+        .upload(filePath, file, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("chat-attachments")
+        .getPublicUrl(filePath);
+      const attachmentUrl = publicUrlData.publicUrl;
+      const messageText = [messageInput.trim(), attachmentUrl]
+        .filter(Boolean)
+        .join("\n");
+
+      const { error: sendError } = await supabase.from("lobby_messages").insert({
+        lobby_id: id,
+        user_id: user.id,
+        user_email: user.email,
+        message: messageText,
+      });
+
+      if (sendError) throw sendError;
+      setMessageInput("");
+    } catch (uploadError) {
+      const message =
+        uploadError instanceof Error ? uploadError.message : JSON.stringify(uploadError);
+      setError(message);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   if (loading) {
     return <main className="min-h-screen bg-zinc-950 p-8 text-zinc-400">Loading squad...</main>;
   }
@@ -253,18 +353,37 @@ export default function SquadPage() {
                       {new Date(chatMessage.created_at).toLocaleString()}
                     </time>
                   </div>
-                  <p className="mt-1 text-sm text-zinc-200">{chatMessage.message}</p>
+                  <div className="mt-1 whitespace-pre-wrap text-sm text-zinc-200">
+                    {renderMessageContent(chatMessage.message)}
+                  </div>
                 </article>
               ))}
               <div ref={messagesEndRef} />
             </div>
             <form className="mt-4 flex shrink-0 gap-3" onSubmit={handleSendMessage}>
               <input
+                accept="image/*,.gif"
+                className="hidden"
+                onChange={handleFileSelected}
+                ref={fileInputRef}
+                type="file"
+              />
+              <input
                 className="min-w-0 flex-1 border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-400"
                 onChange={(event) => setMessageInput(event.target.value || "")}
                 placeholder="Message your squad"
                 value={messageInput}
               />
+              <button
+                aria-label="Attach image or GIF"
+                className="border border-zinc-700 px-3 text-lg text-zinc-300 transition-colors hover:border-emerald-400 hover:text-emerald-400 disabled:cursor-wait disabled:opacity-50"
+                disabled={isUploading || sending}
+                onClick={() => fileInputRef.current?.click()}
+                title={isUploading ? "Uploading attachment" : "Attach image or GIF"}
+                type="button"
+              >
+                {isUploading ? "..." : "Attach"}
+              </button>
               <button className="bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-50" disabled={sending || !messageInput.trim()} type="submit">
                 {sending ? "Sending..." : "Send"}
               </button>
