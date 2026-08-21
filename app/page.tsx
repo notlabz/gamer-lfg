@@ -30,6 +30,7 @@ export default function Home() {
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
   const [game_name, setGameName] = useState("");
@@ -59,6 +60,9 @@ export default function Home() {
   const [copiedDiscordTag, setCopiedDiscordTag] = useState<string | number | null>(
     null,
   );
+  const toast = {
+    error: (message: string) => setToastMessage(message),
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -264,11 +268,7 @@ export default function Home() {
       return;
     }
 
-    const previousLobbies = lobbies;
     setDeletingLobbyId(lobby.id);
-    setLobbies((currentLobbies) =>
-      currentLobbies.filter((currentLobby) => currentLobby.id !== lobby.id),
-    );
 
     try {
       const { error: deleteError } = await supabase
@@ -276,14 +276,22 @@ export default function Home() {
         .delete()
         .eq("id", lobby.id);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error(deleteError);
+        toast.error(deleteError.message);
+        setError(deleteError.message);
+        return;
+      }
+
+      setLobbies((currentLobbies) =>
+        currentLobbies.filter((currentLobby) => currentLobby.id !== lobby.id),
+      );
     } catch (caughtError) {
-      setLobbies(previousLobbies);
       const message =
         caughtError instanceof Error ? caughtError.message : String(caughtError);
       console.error(caughtError);
+      toast.error(message);
       setError(message);
-      alert(message);
     } finally {
       setDeletingLobbyId(null);
       setLobbyPendingDeletion(null);
@@ -677,6 +685,26 @@ export default function Home() {
                 {deletingLobbyId ? "Deleting..." : "Delete Lobby"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {toastMessage && (
+        <div
+          aria-live="assertive"
+          className="fixed bottom-6 right-6 z-40 max-w-sm border border-red-400/60 bg-red-950 px-4 py-3 text-sm text-red-100 shadow-xl"
+          role="alert"
+        >
+          <div className="flex items-start gap-4">
+            <span>{toastMessage}</span>
+            <button
+              aria-label="Dismiss notification"
+              className="text-red-300 hover:text-white"
+              onClick={() => setToastMessage(null)}
+              type="button"
+            >
+              x
+            </button>
           </div>
         </div>
       )}
