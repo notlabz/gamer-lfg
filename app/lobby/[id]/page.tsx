@@ -7,6 +7,7 @@ import {
   type ChangeEvent,
   type ClipboardEvent,
   type FormEvent,
+  type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -287,6 +288,13 @@ export default function SquadPage() {
     }
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  }
+
   if (loading) {
     return <main className="min-h-screen bg-zinc-950 p-8 text-zinc-400">Loading squad...</main>;
   }
@@ -417,11 +425,12 @@ export default function SquadPage() {
                 )}
                 <textarea
                   className="min-h-11 w-full resize-none border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-400"
-                onChange={(event) => setMessageInput(event.target.value || "")}
+                  onChange={(event) => setMessageInput(event.target.value || "")}
+                  onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                placeholder="Message your squad"
+                  placeholder="Message your squad"
                   rows={1}
-                value={messageInput}
+                  value={messageInput}
                 />
               </div>
               <button
