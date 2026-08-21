@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
 type Lobby = Record<string, unknown> & {
@@ -14,6 +15,8 @@ type Lobby = Record<string, unknown> & {
   platform?: string;
   mic_required?: boolean;
   discord_tag?: string;
+  member_ids?: string[];
+  host_id?: string;
 };
 
 const supabase = createClient();
@@ -23,9 +26,11 @@ function stringValue(value: unknown, fallback: string) {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
   const [game_name, setGameName] = useState("");
   const [description, setDescription] = useState("");
@@ -154,6 +159,7 @@ export default function Home() {
         max_players: Number(max_squad_size),
         mic_required: Boolean(mic_required),
         discord_tag,
+        member_ids: [user.id],
         current_players: 1,
         status: "open",
       });
@@ -271,53 +277,61 @@ export default function Home() {
   async function handleJoin(lobby: Lobby) {
     if (!user || lobby.id === undefined || lobby.id === null) return;
 
-    const currentPlayers = Number.parseInt(
-      String(lobby.current_players ?? 0),
-      10,
-    );
-    const maxPlayers = Number.parseInt(String(lobby.max_players ?? 0), 10);
+    const memberIds = Array.isArray(lobby.member_ids) ? lobby.member_ids : [];
+    if (memberIds.includes(user.id)) {
+      router.push(`/lobby/${lobby.id}`);
+      return;
+    }
+
+    const currentPlayers = Number(lobby.current_players ?? 0);
+    const maxPlayers = Number(lobby.max_players ?? 0);
     if (
       !Number.isFinite(currentPlayers) ||
       !Number.isFinite(maxPlayers) ||
       currentPlayers >= maxPlayers
     ) {
+      setJoinError("This squad is already full.");
       return;
     }
 
     const nextPlayers = currentPlayers + 1;
+    const nextMemberIds = [...memberIds, user.id];
     const previousLobbies = lobbies;
+    setJoinError(null);
     setJoiningLobbyId(lobby.id);
     setLobbies((currentLobbies) =>
       currentLobbies.map((currentLobby) =>
         currentLobby.id === lobby.id
-          ? { ...currentLobby, current_players: nextPlayers }
+          ? {
+              ...currentLobby,
+              current_players: nextPlayers,
+              member_ids: nextMemberIds,
+            }
           : currentLobby,
       ),
     );
 
-    const { data, error: joinError } = await supabase
-      .from("lobbies")
-      .update({ current_players: nextPlayers })
-      .eq("id", lobby.id)
-      .lt("current_players", String(maxPlayers))
-      .select("id, current_players")
-      .maybeSingle();
+    try {
+      const { error: updateError } = await supabase
+        .from("lobbies")
+        .update({
+          current_players: nextPlayers,
+          member_ids: nextMemberIds,
+        })
+        .eq("id", lobby.id)
+        .lt("current_players", maxPlayers);
 
-    setJoiningLobbyId(null);
-
-    if (joinError || !data) {
+      if (updateError) throw updateError;
+      router.push(`/lobby/${lobby.id}`);
+    } catch (caughtError) {
       setLobbies(previousLobbies);
-      setError(joinError?.message ?? "This squad is already full.");
-      return;
+      const message =
+        caughtError instanceof Error ? caughtError.message : String(caughtError);
+      console.error(caughtError);
+      setJoinError(message);
+    } finally {
+      setJoiningLobbyId(null);
     }
-
-    setLobbies((currentLobbies) =>
-      currentLobbies.map((currentLobby) =>
-        currentLobby.id === lobby.id
-          ? { ...currentLobby, current_players: data.current_players }
-          : currentLobby,
-      ),
-    );
   }
 
   async function handleCopyDiscordTag(lobbyId: string | number, tag: string) {
@@ -451,6 +465,7 @@ export default function Home() {
           <>
             {loading && <p className="text-zinc-400">Loading active lobbies...</p>}
             {error && <p className="text-red-400">Could not load lobbies: {error}</p>}
+            {joinError && <p className="text-red-400">Could not join squad: {joinError}</p>}
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <label className="sr-only" htmlFor="lobby-search">
                 Search lobbies
@@ -481,6 +496,11 @@ export default function Home() {
             const currentPlayers = Number(lobby.current_players ?? 0);
             const maxPlayers = Number(lobby.max_players ?? 0);
             const isSquadFull = currentPlayers >= maxPlayers;
+            const hasJoined = user
+              ? (Array.isArray(lobby.member_ids) ? lobby.member_ids : []).includes(
+                  user.id,
+                )
+              : false;
 
             return (
               <article
@@ -558,7 +578,7 @@ export default function Home() {
                       </button>
                     )
                   )}
-                  {isSquadFull ? (
+                  {isSquadFull && !hasJoined ? (
                     <span className="block bg-zinc-700 px-4 py-3 text-center text-sm font-semibold text-zinc-400">
                       Squad Full
                     </span>
@@ -566,10 +586,20 @@ export default function Home() {
                     <button
                       className="block w-full bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-emerald-300 disabled:cursor-wait disabled:opacity-60"
                       disabled={joiningLobbyId === lobby.id}
-                      onClick={() => void handleJoin(lobby)}
+                      onClick={() => {
+                        if (hasJoined) {
+                          router.push(`/lobby/${lobby.id}`);
+                        } else {
+                          void handleJoin(lobby);
+                        }
+                      }}
                       type="button"
                     >
-                      {joiningLobbyId === lobby.id ? "Joining..." : "Join Squad"}
+                      {hasJoined
+                        ? "View Squad"
+                        : joiningLobbyId === lobby.id
+                          ? "Joining..."
+                          : "Join Squad"}
                     </button>
                   )}
                 </div>
