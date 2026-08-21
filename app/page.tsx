@@ -42,6 +42,9 @@ export default function Home() {
   const [deletingLobbyId, setDeletingLobbyId] = useState<string | number | null>(
     null,
   );
+  const [lobbyPendingDeletion, setLobbyPendingDeletion] = useState<Lobby | null>(
+    null,
+  );
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -253,7 +256,13 @@ export default function Home() {
   }
 
   async function handleDelete(lobby: Lobby) {
-    if (role !== "admin" || lobby.id === undefined || lobby.id === null) return;
+    if (
+      (user?.id !== lobby.host_id && role !== "admin") ||
+      lobby.id === undefined ||
+      lobby.id === null
+    ) {
+      return;
+    }
 
     const previousLobbies = lobbies;
     setDeletingLobbyId(lobby.id);
@@ -261,21 +270,32 @@ export default function Home() {
       currentLobbies.filter((currentLobby) => currentLobby.id !== lobby.id),
     );
 
-    const { error: deleteError } = await supabase
-      .from("lobbies")
-      .delete()
-      .eq("id", lobby.id);
+    try {
+      const { error: deleteError } = await supabase
+        .from("lobbies")
+        .delete()
+        .eq("id", lobby.id);
 
-    setDeletingLobbyId(null);
-
-    if (deleteError) {
+      if (deleteError) throw deleteError;
+    } catch (caughtError) {
       setLobbies(previousLobbies);
-      setError(deleteError.message);
+      const message =
+        caughtError instanceof Error ? caughtError.message : String(caughtError);
+      console.error(caughtError);
+      setError(message);
+      alert(message);
+    } finally {
+      setDeletingLobbyId(null);
+      setLobbyPendingDeletion(null);
     }
   }
 
   async function handleJoin(lobby: Lobby) {
     if (!user || lobby.id === undefined || lobby.id === null) return;
+    if (user.id === lobby.host_id) {
+      setJoinError("You are already the host of this lobby.");
+      return;
+    }
 
     const memberIds = Array.isArray(lobby.member_ids) ? lobby.member_ids : [];
     if (memberIds.includes(user.id)) {
@@ -501,6 +521,8 @@ export default function Home() {
                   user.id,
                 )
               : false;
+            const isHost = user?.id === lobby.host_id;
+            const canDelete = isHost || role === "admin";
 
             return (
               <article
@@ -514,12 +536,12 @@ export default function Home() {
                     </p>
                     <h2 className="mt-1 text-xl font-semibold">{lobbyName}</h2>
                   </div>
-                  {role === "admin" && (
+                  {canDelete && (
                     <button
                       aria-label={`Delete ${lobbyName}`}
                       className="text-sm text-red-400 transition-colors hover:text-red-300 disabled:cursor-wait disabled:opacity-50"
                       disabled={deletingLobbyId === lobby.id}
-                      onClick={() => void handleDelete(lobby)}
+                      onClick={() => setLobbyPendingDeletion(lobby)}
                       type="button"
                     >
                       {deletingLobbyId === lobby.id ? "Deleting..." : "Delete"}
@@ -578,7 +600,11 @@ export default function Home() {
                       </button>
                     )
                   )}
-                  {isSquadFull && !hasJoined ? (
+                  {isHost ? (
+                    <span className="block border border-emerald-400/50 px-4 py-3 text-center text-sm font-semibold text-emerald-400">
+                      Host Lobby
+                    </span>
+                  ) : isSquadFull && !hasJoined ? (
                     <span className="block bg-zinc-700 px-4 py-3 text-center text-sm font-semibold text-zinc-400">
                       Squad Full
                     </span>
@@ -610,6 +636,50 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {lobbyPendingDeletion && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 px-6 py-10"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !deletingLobbyId) {
+              setLobbyPendingDeletion(null);
+            }
+          }}
+        >
+          <div
+            aria-labelledby="delete-lobby-title"
+            aria-modal="true"
+            className="w-full max-w-md border border-zinc-700 bg-zinc-900 p-6 shadow-2xl"
+            role="dialog"
+          >
+            <h2 className="text-xl font-semibold" id="delete-lobby-title">
+              Delete lobby?
+            </h2>
+            <p className="mt-4 text-sm leading-6 text-zinc-400">
+              Are you sure you want to permanently delete this lobby?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                className="border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white"
+                disabled={Boolean(deletingLobbyId)}
+                onClick={() => setLobbyPendingDeletion(null)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-red-500 px-4 py-3 text-sm font-semibold text-white hover:bg-red-400 disabled:cursor-wait disabled:opacity-60"
+                disabled={Boolean(deletingLobbyId)}
+                onClick={() => void handleDelete(lobbyPendingDeletion)}
+                type="button"
+              >
+                {deletingLobbyId ? "Deleting..." : "Delete Lobby"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isAuthModalOpen && (
         <div
