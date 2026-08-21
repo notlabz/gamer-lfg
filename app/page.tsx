@@ -25,6 +25,15 @@ function stringValue(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
+function formatError(error: unknown) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message) return message;
+  }
+
+  return JSON.stringify(error) || "An unexpected error occurred.";
+}
+
 export default function Home() {
   const router = useRouter();
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
@@ -36,6 +45,7 @@ export default function Home() {
   const [game_name, setGameName] = useState("");
   const [description, setDescription] = useState("");
   const [mode, setMode] = useState("");
+  const [platform, setPlatform] = useState("");
   const [max_squad_size, setMaxSquadSize] = useState(4);
   const [mic_required, setMicRequired] = useState(false);
   const [discord_tag, setDiscordTag] = useState("");
@@ -76,7 +86,7 @@ export default function Home() {
       if (!isMounted) return;
 
       if (queryError) {
-        setError(queryError.message);
+        setError(formatError(queryError));
       } else {
         setLobbies((data ?? []) as Lobby[]);
         setError(null);
@@ -122,7 +132,7 @@ export default function Home() {
       if (!isMounted) return;
 
       if (profileError) {
-        setError(profileError.message);
+        setError(formatError(profileError));
         setRole(null);
         return;
       }
@@ -132,7 +142,7 @@ export default function Home() {
 
     void supabase.auth.getUser().then(({ data, error: userError }) => {
       if (userError) {
-        setError(userError.message);
+        setError(formatError(userError));
         return;
       }
       void loadUserProfile(data.user);
@@ -163,12 +173,11 @@ export default function Home() {
         game_title: game_name,
         lobby_name: description,
         game_mode: mode,
-        max_players: Number(max_squad_size),
+        platform,
         mic_required: Boolean(mic_required),
-        discord_tag,
-        member_ids: [user.id],
+        max_players: Number(max_squad_size),
         current_players: 1,
-        status: "open",
+        status: "active",
       });
 
       if (insertError) throw insertError;
@@ -184,14 +193,14 @@ export default function Home() {
       setGameName("");
       setDescription("");
       setMode("");
+      setPlatform("");
       setMaxSquadSize(4);
       setMicRequired(false);
       setDiscordTag("");
       setIsHostModalOpen(false);
     } catch (caughtError) {
-      console.error(caughtError);
-      const message =
-        caughtError instanceof Error ? caughtError.message : String(caughtError);
+      const message = formatError(caughtError);
+      console.error(message);
       setError(message);
       alert(message);
     } finally {
@@ -213,7 +222,7 @@ export default function Home() {
       setIsAuthenticating(false);
 
       if (loginError) {
-        setError(loginError.message);
+        setError(formatError(loginError));
         return;
       }
 
@@ -231,13 +240,14 @@ export default function Home() {
     setIsAuthenticating(false);
 
     if (signupError) {
+      const signupMessage = formatError(signupError);
       const isExistingAccount = /already registered|already exists/i.test(
-        signupError.message,
+        signupMessage,
       );
       setError(
         isExistingAccount
           ? "An account with this email already exists. Please log in instead."
-          : signupError.message,
+          : signupMessage,
       );
       if (isExistingAccount) setAuthTab("login");
       return;
@@ -277,9 +287,10 @@ export default function Home() {
         .eq("id", lobby.id);
 
       if (deleteError) {
-        console.error(deleteError);
-        toast.error(deleteError.message);
-        setError(deleteError.message);
+        const message = formatError(deleteError);
+        console.error(message);
+        toast.error(message);
+        setError(message);
         return;
       }
 
@@ -287,9 +298,8 @@ export default function Home() {
         currentLobbies.filter((currentLobby) => currentLobby.id !== lobby.id),
       );
     } catch (caughtError) {
-      const message =
-        caughtError instanceof Error ? caughtError.message : String(caughtError);
-      console.error(caughtError);
+      const message = formatError(caughtError);
+      console.error(message);
       toast.error(message);
       setError(message);
     } finally {
@@ -353,9 +363,8 @@ export default function Home() {
       router.push(`/lobby/${lobby.id}`);
     } catch (caughtError) {
       setLobbies(previousLobbies);
-      const message =
-        caughtError instanceof Error ? caughtError.message : String(caughtError);
-      console.error(caughtError);
+      const message = formatError(caughtError);
+      console.error(message);
       setJoinError(message);
     } finally {
       setJoiningLobbyId(null);
@@ -368,8 +377,9 @@ export default function Home() {
       setCopiedDiscordTag(lobbyId);
       window.setTimeout(() => setCopiedDiscordTag(null), 1500);
     } catch (copyError) {
-      console.error(copyError);
-      setError("Could not copy the Discord tag.");
+      const message = formatError(copyError);
+      console.error(message);
+      setError(message);
     }
   }
 
@@ -889,6 +899,17 @@ export default function Home() {
                   />
                 </label>
               </div>
+              <label className="block text-sm text-zinc-300">
+                Platform
+                <input
+                  className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                  name="platform"
+                  onChange={(event) => setPlatform(event.target.value || "")}
+                  placeholder="PC, PlayStation, Xbox"
+                  required
+                  value={platform}
+                />
+              </label>
               <label className="flex items-center gap-3 text-sm text-zinc-300">
                 <input
                   checked={mic_required}
