@@ -42,7 +42,8 @@ function displayName(profile: Profile | undefined, userId: string) {
 }
 
 export default function SquadPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const id = params.id;
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [lobby, setLobby] = useState<Lobby | null>(null);
@@ -111,49 +112,34 @@ export default function SquadPage() {
   }, [id, router]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!params.id) return;
 
     const channel = supabase
-      .channel(`squad-${id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "lobbies", filter: `id=eq.${id}` },
-        (payload) => setLobby(payload.new as Lobby),
-      )
+      .channel(`room-${params.id}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "lobby_messages",
-          filter: `lobby_id=eq.${id}`,
+          filter: `lobby_id=eq.${params.id}`,
         },
         (payload) => {
-          const incomingMessage = payload.new as LobbyMessage;
-          setMessages((current) => {
-            const optimisticIndex = current.findIndex(
-              (message) =>
-                message.id.startsWith("optimistic-") &&
-                message.user_id === incomingMessage.user_id &&
-                message.message === incomingMessage.message,
-            );
-
-            if (optimisticIndex === -1) {
-              return [...current, incomingMessage];
-            }
-
-            const nextMessages = [...current];
-            nextMessages[optimisticIndex] = incomingMessage;
-            return nextMessages;
+          const newMsg = payload.new as LobbyMessage;
+          setMessages((prev) => {
+            if (prev.some((message) => message.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
           });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Realtime status:", status);
+      });
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [id]);
+  }, [params.id]);
 
   async function handleSendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
