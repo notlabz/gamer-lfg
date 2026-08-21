@@ -30,6 +30,7 @@ type LobbyMessage = {
   id: string;
   lobby_id: string;
   user_id: string;
+  user_email?: string;
   message: string;
   created_at: string;
 };
@@ -144,6 +145,7 @@ export default function SquadPage() {
     const { error: sendError } = await supabase.from("lobby_messages").insert({
       lobby_id: id,
       user_id: user.id,
+      user_email: user.email,
       message: messageInput.trim(),
     });
     setSending(false);
@@ -222,7 +224,21 @@ export default function SquadPage() {
               {messages.length === 0 && <p className="text-sm text-zinc-500">No messages yet.</p>}
               {messages.map((chatMessage) => (
                 <article className="border border-zinc-800 bg-zinc-950 p-3" key={chatMessage.id}>
-                  <p className="text-xs text-emerald-400">{displayName(profiles.find((profile) => profile.id === chatMessage.user_id), chatMessage.user_id)}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate text-xs text-emerald-400">
+                      {chatMessage.user_email ||
+                        displayName(
+                          profiles.find((profile) => profile.id === chatMessage.user_id),
+                          chatMessage.user_id,
+                        )}
+                    </p>
+                    <time
+                      className="shrink-0 text-[11px] text-zinc-500"
+                      dateTime={chatMessage.created_at}
+                    >
+                      {new Date(chatMessage.created_at).toLocaleString()}
+                    </time>
+                  </div>
                   <p className="mt-1 text-sm text-zinc-200">{chatMessage.message}</p>
                 </article>
               ))}
