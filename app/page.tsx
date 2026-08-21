@@ -63,6 +63,8 @@ export default function Home() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [joiningLobbyId, setJoiningLobbyId] = useState<string | number | null>(
     null,
@@ -264,9 +266,24 @@ export default function Home() {
       return;
     }
 
-    setAuthEmail("");
     setAuthPassword("");
-    setIsAuthModalOpen(false);
+    setIsSubmitted(true);
+  }
+
+  async function handleResendEmail() {
+    if (!authEmail) return;
+
+    setIsResending(true);
+    setError(null);
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: authEmail,
+    });
+    setIsResending(false);
+
+    if (resendError) {
+      setError(resendError.message);
+    }
   }
 
   async function handleDelete(lobby: Lobby) {
@@ -420,6 +437,7 @@ export default function Home() {
                   setIsHostModalOpen(true);
                 } else {
                   setAuthTab("login");
+                  setIsSubmitted(false);
                   setIsAuthModalOpen(true);
                 }
               }}
@@ -448,6 +466,7 @@ export default function Home() {
                 className="border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
                 onClick={() => {
                   setAuthTab("login");
+                  setIsSubmitted(false);
                   setIsAuthModalOpen(true);
                 }}
                 type="button"
@@ -480,6 +499,7 @@ export default function Home() {
                   className="bg-emerald-400 px-6 py-4 text-sm font-semibold text-zinc-950 transition-colors hover:bg-emerald-300"
                   onClick={() => {
                     setAuthTab("login");
+                    setIsSubmitted(false);
                     setIsAuthModalOpen(true);
                   }}
                   type="button"
@@ -490,6 +510,7 @@ export default function Home() {
                   className="border border-zinc-600 px-6 py-4 text-sm font-semibold text-zinc-100 transition-colors hover:border-emerald-400 hover:text-emerald-400"
                   onClick={() => {
                     setAuthTab("signup");
+                    setIsSubmitted(false);
                     setIsAuthModalOpen(true);
                   }}
                   type="button"
@@ -751,22 +772,68 @@ export default function Home() {
                 x
               </button>
             </div>
-            <div className="mb-6 grid grid-cols-2 border-b border-zinc-700">
+            {!isSubmitted && (
+              <div className="mb-6 grid grid-cols-2 border-b border-zinc-700">
               <button
                 className={`border-b-2 px-3 py-3 text-sm font-semibold ${authTab === "login" ? "border-emerald-400 text-emerald-400" : "border-transparent text-zinc-500"}`}
-                onClick={() => setAuthTab("login")}
+                onClick={() => {
+                  setIsSubmitted(false);
+                  setAuthTab("login");
+                }}
                 type="button"
               >
                 Log In
               </button>
               <button
                 className={`border-b-2 px-3 py-3 text-sm font-semibold ${authTab === "signup" ? "border-emerald-400 text-emerald-400" : "border-transparent text-zinc-500"}`}
-                onClick={() => setAuthTab("signup")}
+                onClick={() => {
+                  setIsSubmitted(false);
+                  setAuthTab("signup");
+                }}
                 type="button"
               >
                 Sign Up
               </button>
-            </div>
+              </div>
+            )}
+            {isSubmitted ? (
+              <div className="border border-emerald-400/40 bg-emerald-950/30 p-6">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center border border-emerald-400/50 text-2xl text-emerald-400" aria-hidden="true">
+                  ✉
+                </div>
+                <h3 className="text-2xl font-semibold text-white">
+                  Welcome to Gamer LFG! 🎮
+                </h3>
+                <p className="mt-4 text-sm leading-6 text-zinc-300">
+                  Thank you for creating an account and joining the Gamer LFG community. By creating your profile, you are directly helping gamers everywhere connect, assemble squads, and find their perfect gaming teams!
+                </p>
+                <p className="mt-4 border-l-2 border-emerald-400 pl-4 text-sm leading-6 text-emerald-100">
+                  Please open your inbox at {authEmail} and click the verification link to complete your account setup and start building lobbies.
+                </p>
+                {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    className="bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:cursor-wait disabled:opacity-60"
+                    disabled={isResending}
+                    onClick={() => void handleResendEmail()}
+                    type="button"
+                  >
+                    {isResending ? "Resending..." : "Resend Email"}
+                  </button>
+                  <button
+                    className="border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white"
+                    onClick={() => {
+                      setIsSubmitted(false);
+                      setAuthTab("login");
+                      setError(null);
+                    }}
+                    type="button"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </div>
+            ) : (
             <form className="space-y-4" onSubmit={handleAuthSubmit}>
               <label className="block text-sm text-zinc-300">
                 Email
@@ -804,6 +871,7 @@ export default function Home() {
                     : "Sign Up"}
               </button>
             </form>
+            )}
           </div>
         </div>
       )}
