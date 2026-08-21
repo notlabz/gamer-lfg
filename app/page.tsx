@@ -271,9 +271,18 @@ export default function Home() {
   async function handleJoin(lobby: Lobby) {
     if (!user || lobby.id === undefined || lobby.id === null) return;
 
-    const currentPlayers = Number(lobby.current_players ?? 0);
-    const maxPlayers = Number(lobby.max_players ?? 0);
-    if (currentPlayers >= maxPlayers) return;
+    const currentPlayers = Number.parseInt(
+      String(lobby.current_players ?? 0),
+      10,
+    );
+    const maxPlayers = Number.parseInt(String(lobby.max_players ?? 0), 10);
+    if (
+      !Number.isFinite(currentPlayers) ||
+      !Number.isFinite(maxPlayers) ||
+      currentPlayers >= maxPlayers
+    ) {
+      return;
+    }
 
     const nextPlayers = currentPlayers + 1;
     const previousLobbies = lobbies;
@@ -290,7 +299,7 @@ export default function Home() {
       .from("lobbies")
       .update({ current_players: nextPlayers })
       .eq("id", lobby.id)
-      .lt("current_players", maxPlayers)
+      .lt("current_players", String(maxPlayers))
       .select("id, current_players")
       .maybeSingle();
 
