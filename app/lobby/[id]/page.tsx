@@ -122,11 +122,30 @@ export default function SquadPage() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "lobby_messages", filter: `lobby_id=eq.${id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "lobby_messages",
+          filter: `lobby_id=eq.${id}`,
+        },
         (payload) => {
-          if (payload.eventType === "INSERT") {
-            setMessages((current) => [...current, payload.new as LobbyMessage]);
-          }
+          const incomingMessage = payload.new as LobbyMessage;
+          setMessages((current) => {
+            const optimisticIndex = current.findIndex(
+              (message) =>
+                message.id.startsWith("optimistic-") &&
+                message.user_id === incomingMessage.user_id &&
+                message.message === incomingMessage.message,
+            );
+
+            if (optimisticIndex === -1) {
+              return [...current, incomingMessage];
+            }
+
+            const nextMessages = [...current];
+            nextMessages[optimisticIndex] = incomingMessage;
+            return nextMessages;
+          });
         },
       )
       .subscribe();
@@ -140,22 +159,38 @@ export default function SquadPage() {
     event.preventDefault();
     if (!user || !id || !messageInput.trim()) return;
 
+    const messageText = messageInput.trim();
+    const optimisticMessage: LobbyMessage = {
+      id: `optimistic-${Date.now()}`,
+      lobby_id: id,
+      user_id: user.id,
+      user_email: user.email,
+      message: messageText,
+      created_at: new Date().toISOString(),
+    };
+
     setSending(true);
     setError(null);
+    setMessages((current) => [...current, optimisticMessage]);
+    setMessageInput("");
+
     const { error: sendError } = await supabase.from("lobby_messages").insert({
       lobby_id: id,
       user_id: user.id,
       user_email: user.email,
-      message: messageInput.trim(),
+      message: messageText,
     });
-    setSending(false);
 
     if (sendError) {
+      setMessages((current) =>
+        current.filter((message) => message.id !== optimisticMessage.id),
+      );
       setError(sendError.message);
+      setSending(false);
       return;
     }
 
-    setMessageInput("");
+    setSending(false);
   }
 
   if (loading) {
