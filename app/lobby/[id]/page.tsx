@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type ClipboardEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
@@ -111,6 +112,10 @@ export default function SquadPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attachmentPreviews, setAttachmentPreviews] = useState<
+    { file: File; url: string }[]
+  >([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -205,54 +210,31 @@ export default function SquadPage() {
 
   async function handleSendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user || !id || !messageInput.trim()) return;
-
-    const messageText = messageInput.trim();
+    if (!user || !id || (!messageInput.trim() && attachments.length === 0)) return;
 
     setSending(true);
-    setError(null);
-
-    const { error: sendError } = await supabase.from("lobby_messages").insert({
-      lobby_id: id,
-      user_id: user.id,
-      user_email: user.email,
-      message: messageText,
-    });
-
-    if (sendError) {
-      setError(sendError.message);
-      setSending(false);
-      return;
-    }
-
-    setMessageInput("");
-    setSending(false);
-  }
-
-  async function handleFileSelected(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file || !user || !id) return;
-
-    setIsUploading(true);
+    setIsUploading(attachments.length > 0);
     setError(null);
 
     try {
-      const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const filePath = `${id}/${crypto.randomUUID()}-${safeFileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("chat-attachments")
-        .upload(filePath, file, { cacheControl: "3600", upsert: false });
+      const attachmentUrls: string[] = [];
+      for (const file of attachments) {
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+        const filePath = `${id}/${crypto.randomUUID()}-${safeFileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("chat-attachments")
+          .upload(filePath, file, { cacheControl: "3600", upsert: false });
+        if (uploadError) throw uploadError;
 
-      if (uploadError) throw uploadError;
+        const { data: publicUrlData } = supabase.storage
+          .from("chat-attachments")
+          .getPublicUrl(filePath);
+        attachmentUrls.push(publicUrlData.publicUrl);
+      }
 
-      const { data: publicUrlData } = supabase.storage
-        .from("chat-attachments")
-        .getPublicUrl(filePath);
-      const attachmentUrl = publicUrlData.publicUrl;
-      const messageText = [messageInput.trim(), attachmentUrl]
+      const messageText = [messageInput.trim(), ...attachmentUrls]
         .filter(Boolean)
         .join("\n");
-
       const { error: sendError } = await supabase.from("lobby_messages").insert({
         lobby_id: id,
         user_id: user.id,
@@ -262,13 +244,46 @@ export default function SquadPage() {
 
       if (sendError) throw sendError;
       setMessageInput("");
-    } catch (uploadError) {
-      const message =
-        uploadError instanceof Error ? uploadError.message : JSON.stringify(uploadError);
-      setError(message);
+      setAttachments([]);
+      attachmentPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+      setAttachmentPreviews([]);
+    } catch (sendError) {
+      setError(sendError instanceof Error ? sendError.message : JSON.stringify(sendError));
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSending(false);
+    }
+  }
+
+  function addAttachmentFiles(files: File[]) {
+    const filesToAdd = files.filter((file) =>
+      file.type.startsWith("image/"),
+    );
+    setAttachments((previous) => [...previous, ...filesToAdd]);
+    setAttachmentPreviews((previous) => [
+      ...previous,
+      ...filesToAdd.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    ]);
+  }
+
+  function handleFileChange(newFiles: FileList | null) {
+    if (!newFiles) return;
+    addAttachmentFiles(Array.from(newFiles));
+  }
+
+  function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
+    handleFileChange(event.target.files);
+    event.target.value = "";
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+    for (const item of Array.from(event.clipboardData.items)) {
+      if (!item.type.startsWith("image/")) continue;
+      const file = item.getAsFile();
+      if (!file) continue;
+      event.preventDefault();
+      addAttachmentFiles([file]);
+      return;
     }
   }
 
@@ -364,16 +379,51 @@ export default function SquadPage() {
               <input
                 accept="image/*,.gif"
                 className="hidden"
-                onChange={handleFileSelected}
+                onChange={handleFileInputChange}
                 ref={fileInputRef}
                 type="file"
               />
-              <input
-                className="min-w-0 flex-1 border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-400"
+              <div className="min-w-0 flex-1">
+                {attachmentPreviews.length > 0 && (
+                  <div className="mb-2 flex gap-2 overflow-x-auto">
+                    {attachmentPreviews.map((preview) => (
+                      <div className="relative shrink-0" key={`${preview.file.name}-${preview.file.lastModified}`}>
+                        <img
+                          alt={`Preview of ${preview.file.name}`}
+                          className="h-16 w-16 rounded object-cover"
+                          src={preview.url}
+                        />
+                        <button
+                          aria-label={`Remove ${preview.file.name}`}
+                          className="absolute right-0 top-0 bg-zinc-950/80 px-1 text-xs text-white"
+                          onClick={() =>
+                            (() => {
+                              URL.revokeObjectURL(preview.url);
+                              setAttachments((current) =>
+                                current.filter((file) => file !== preview.file),
+                              );
+                              setAttachmentPreviews((current) =>
+                                current.filter((item) => item.file !== preview.file),
+                              );
+                            })()
+                          }
+                          type="button"
+                        >
+                          x
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <textarea
+                  className="min-h-11 w-full resize-none border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-400"
                 onChange={(event) => setMessageInput(event.target.value || "")}
+                  onPaste={handlePaste}
                 placeholder="Message your squad"
+                  rows={1}
                 value={messageInput}
-              />
+                />
+              </div>
               <button
                 aria-label="Attach image or GIF"
                 className="border border-zinc-700 px-3 text-lg text-zinc-300 transition-colors hover:border-emerald-400 hover:text-emerald-400 disabled:cursor-wait disabled:opacity-50"
@@ -384,7 +434,7 @@ export default function SquadPage() {
               >
                 {isUploading ? "..." : "Attach"}
               </button>
-              <button className="bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-50" disabled={sending || !messageInput.trim()} type="submit">
+              <button className="bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-50" disabled={sending || isUploading || (!messageInput.trim() && attachments.length === 0)} type="submit">
                 {sending ? "Sending..." : "Send"}
               </button>
             </form>
