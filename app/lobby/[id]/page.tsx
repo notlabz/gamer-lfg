@@ -23,7 +23,7 @@ type Lobby = {
   max_players?: number;
   platform?: string;
   mic_required?: boolean;
-  discord_tag?: string;
+  discord?: string;
   host_id?: string;
   member_ids?: string[];
 };
@@ -48,6 +48,16 @@ const supabase = createClient();
 
 function displayName(profile: Profile | undefined, userId: string) {
   return profile?.display_name || profile?.username || profile?.email || userId;
+}
+
+function getDiscordUrl(input: string) {
+  const value = input.trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^(?:discord\.gg|discord\.com)\//i.test(value)) {
+    return `https://${value}`;
+  }
+  return `https://discord.com/users/${encodeURIComponent(value)}`;
 }
 
 function renderMessageContent(content: string): ReactNode[] {
@@ -347,9 +357,23 @@ export default function SquadPage() {
             </ul>
             <dl className="mt-8 space-y-3 border-t border-zinc-800 pt-5 text-sm">
               <div className="flex justify-between gap-4"><dt className="text-zinc-500">Voice</dt><dd>{lobby.mic_required ? "Mic required" : "Mic optional"}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-zinc-500">Discord</dt><dd className="max-w-[65%] truncate text-right">{lobby.discord_tag ?? "Not provided"}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-zinc-500">Discord</dt><dd className="max-w-[65%] truncate text-right">{lobby.discord ?? "Not provided"}</dd></div>
               <div className="flex justify-between gap-4"><dt className="text-zinc-500">Platform</dt><dd>{lobby.platform ?? "Any"}</dd></div>
             </dl>
+            {lobby.discord ? (
+              <a
+                className="mt-6 block bg-[#5865F2] px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#4752c4]"
+                href={getDiscordUrl(lobby.discord) ?? undefined}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Join Discord Voice / Chat
+              </a>
+            ) : (
+              <span className="mt-6 block border border-zinc-700 px-4 py-3 text-center text-sm text-zinc-500">
+                No Discord Provided
+              </span>
+            )}
           </section>
 
           <section className="flex h-[calc(100vh-250px)] min-h-[500px] max-h-[700px] flex-col border border-zinc-800 bg-zinc-900 p-5">

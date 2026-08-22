@@ -14,7 +14,7 @@ type Lobby = Record<string, unknown> & {
   max_players?: number;
   platform?: string;
   mic_required?: boolean;
-  discord_tag?: string;
+  discord?: string;
   member_ids?: string[];
   host_id?: string;
 };
@@ -34,6 +34,16 @@ function formatError(error: unknown) {
   return JSON.stringify(error) || "An unexpected error occurred.";
 }
 
+function getDiscordUrl(input: string) {
+  const value = input.trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^(?:discord\.gg|discord\.com)\//i.test(value)) {
+    return `https://${value}`;
+  }
+  return `https://discord.com/users/${encodeURIComponent(value)}`;
+}
+
 export default function Home() {
   const router = useRouter();
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
@@ -48,7 +58,7 @@ export default function Home() {
   const [platform, setPlatform] = useState("");
   const [max_squad_size, setMaxSquadSize] = useState(4);
   const [mic_required, setMicRequired] = useState(false);
-  const [discord_tag, setDiscordTag] = useState("");
+  const [discord, setDiscord] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingLobbyId, setDeletingLobbyId] = useState<string | number | null>(
     null,
@@ -67,9 +77,6 @@ export default function Home() {
   const [isResending, setIsResending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [joiningLobbyId, setJoiningLobbyId] = useState<string | number | null>(
-    null,
-  );
-  const [copiedDiscordTag, setCopiedDiscordTag] = useState<string | number | null>(
     null,
   );
   const toast = {
@@ -180,6 +187,7 @@ export default function Home() {
         max_players: Number(max_squad_size),
         current_players: 1,
         status: "active",
+        discord: discord.trim(),
       });
 
       if (insertError) throw insertError;
@@ -198,7 +206,7 @@ export default function Home() {
       setPlatform("");
       setMaxSquadSize(4);
       setMicRequired(false);
-      setDiscordTag("");
+      setDiscord("");
       setIsHostModalOpen(false);
     } catch (caughtError) {
       const message = formatError(caughtError);
@@ -388,18 +396,6 @@ export default function Home() {
     }
   }
 
-  async function handleCopyDiscordTag(lobbyId: string | number, tag: string) {
-    try {
-      await navigator.clipboard.writeText(tag);
-      setCopiedDiscordTag(lobbyId);
-      window.setTimeout(() => setCopiedDiscordTag(null), 1500);
-    } catch (copyError) {
-      const message = formatError(copyError);
-      console.error(message);
-      setError(message);
-    }
-  }
-
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredLobbies = lobbies.filter((lobby) => {
     if (!normalizedSearchTerm) return true;
@@ -551,7 +547,8 @@ export default function Home() {
           {filteredLobbies.map((lobby, index) => {
             const gameTitle = stringValue(lobby.game_title, "Untitled game");
             const lobbyName = stringValue(lobby.lobby_name, "Untitled lobby");
-            const discordTag = stringValue(lobby.discord_tag, "");
+            const discordValue = stringValue(lobby.discord, "");
+            const discordUrl = getDiscordUrl(discordValue);
             const currentPlayers = Number(lobby.current_players ?? 0);
             const maxPlayers = Number(lobby.max_players ?? 0);
             const isSquadFull = currentPlayers >= maxPlayers;
@@ -609,35 +606,24 @@ export default function Home() {
                   <div className="flex justify-between gap-4">
                     <dt className="text-zinc-500">Discord</dt>
                     <dd className="max-w-[65%] truncate text-right">
-                      {discordTag || "Not provided"}
+                      {discordValue || "Not provided"}
                     </dd>
                   </div>
                 </dl>
                 <div className="mt-6 space-y-3">
-                  {discordTag && (
-                    discordTag.startsWith("https://discord.gg/") ? (
-                      <a
-                        className="block border border-zinc-600 px-4 py-2 text-center text-sm text-zinc-300 transition-colors hover:border-emerald-400 hover:text-emerald-400"
-                        href={discordTag}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        Open Discord Invite
-                      </a>
-                    ) : (
-                      <button
-                        className="block w-full border border-zinc-600 px-4 py-2 text-sm text-zinc-300 transition-colors hover:border-emerald-400 hover:text-emerald-400"
-                        onClick={() =>
-                          lobby.id !== undefined &&
-                          void handleCopyDiscordTag(lobby.id, discordTag)
-                        }
-                        type="button"
-                      >
-                        {copiedDiscordTag === lobby.id
-                          ? "Copied Discord Tag"
-                          : "Copy Discord Tag"}
-                      </button>
-                    )
+                  {discordUrl ? (
+                    <a
+                      className="block border border-[#5865F2] px-4 py-2 text-center text-sm text-[#9aa5ff] transition-colors hover:bg-[#5865F2] hover:text-white"
+                      href={discordUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Join Discord
+                    </a>
+                  ) : (
+                    <span className="block border border-zinc-700 px-4 py-2 text-center text-sm text-zinc-500">
+                      No Discord Provided
+                    </span>
                   )}
                   {isHost || hasJoined ? (
                     <button
@@ -992,11 +978,11 @@ export default function Home() {
                 Discord Handle / Invite Link
                 <input
                   className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
-                  name="discord_tag"
-                  onChange={(event) => setDiscordTag(event.target.value || "")}
+                  name="discord"
+                  onChange={(event) => setDiscord(event.target.value || "")}
                   placeholder="discord.gg/invite or username#1234"
                   required
-                  value={discord_tag}
+                  value={discord}
                 />
               </label>
               <button
