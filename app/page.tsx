@@ -44,6 +44,27 @@ function getDiscordUrl(input: string) {
   return `https://discord.com/users/${encodeURIComponent(value)}`;
 }
 
+async function handleDiscordClick(discordInput: string, notify: (message: string) => void) {
+  const value = discordInput.trim();
+  if (!value) return;
+
+  const isInvite = /discord\.gg|discord\.com\/invite|^https?:\/\//i.test(value);
+  if (isInvite) {
+    window.open(getDiscordUrl(value) ?? value, "_blank");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(value);
+    notify(`Copied Discord username '${value}' to clipboard!`);
+    window.open("https://discord.com/channels/@me", "_blank");
+  } catch (copyError) {
+    const message = formatError(copyError);
+    console.error(message);
+    notify(message);
+  }
+}
+
 export default function Home() {
   const router = useRouter();
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
@@ -612,14 +633,15 @@ export default function Home() {
                 </dl>
                 <div className="mt-6 space-y-3">
                   {discordUrl ? (
-                    <a
+                    <button
                       className="block border border-[#5865F2] px-4 py-2 text-center text-sm text-[#9aa5ff] transition-colors hover:bg-[#5865F2] hover:text-white"
-                      href={discordUrl}
-                      rel="noreferrer"
-                      target="_blank"
+                      onClick={() => void handleDiscordClick(discordValue, setToastMessage)}
+                      type="button"
                     >
-                      Join Discord
-                    </a>
+                      {/^https?:\/\//i.test(discordValue) || /discord\.gg|discord\.com\/invite/i.test(discordValue)
+                        ? "Join Discord Server"
+                        : `Copy Discord Tag (${discordValue})`}
+                    </button>
                   ) : (
                     <span className="block border border-zinc-700 px-4 py-2 text-center text-sm text-zinc-500">
                       No Discord Provided

@@ -60,6 +60,25 @@ function getDiscordUrl(input: string) {
   return `https://discord.com/users/${encodeURIComponent(value)}`;
 }
 
+async function handleDiscordClick(discordInput: string, notify: (message: string) => void) {
+  const value = discordInput.trim();
+  if (!value) return;
+
+  const isInvite = /discord\.gg|discord\.com\/invite|^https?:\/\//i.test(value);
+  if (isInvite) {
+    window.open(getDiscordUrl(value) ?? value, "_blank");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(value);
+    notify(`Copied Discord username '${value}' to clipboard!`);
+    window.open("https://discord.com/channels/@me", "_blank");
+  } catch (copyError) {
+    notify(copyError instanceof Error ? copyError.message : JSON.stringify(copyError));
+  }
+}
+
 function renderMessageContent(content: string): ReactNode[] {
   const parts = content.split(/(https?:\/\/[^\s]+)/g);
   const rendered: ReactNode[] = [];
@@ -127,6 +146,7 @@ export default function SquadPage() {
   const [attachmentPreviews, setAttachmentPreviews] = useState<
     { file: File; url: string }[]
   >([]);
+  const [discordNotice, setDiscordNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -361,18 +381,26 @@ export default function SquadPage() {
               <div className="flex justify-between gap-4"><dt className="text-zinc-500">Platform</dt><dd>{lobby.platform ?? "Any"}</dd></div>
             </dl>
             {lobby.discord ? (
-              <a
+              <button
                 className="mt-6 block bg-[#5865F2] px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#4752c4]"
-                href={getDiscordUrl(lobby.discord) ?? undefined}
-                rel="noreferrer"
-                target="_blank"
+                onClick={() =>
+                  void handleDiscordClick(lobby.discord ?? "", setDiscordNotice)
+                }
+                type="button"
               >
-                Join Discord Voice / Chat
-              </a>
+                {/discord\.gg|discord\.com\/invite|^https?:\/\//i.test(lobby.discord)
+                  ? "Join Discord Server"
+                  : `Copy Discord Tag (${lobby.discord})`}
+              </button>
             ) : (
               <span className="mt-6 block border border-zinc-700 px-4 py-3 text-center text-sm text-zinc-500">
                 No Discord Provided
               </span>
+            )}
+            {discordNotice && (
+              <p className="mt-3 text-sm text-emerald-300" role="status">
+                {discordNotice}
+              </p>
             )}
           </section>
 
