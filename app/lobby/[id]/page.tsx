@@ -60,7 +60,10 @@ function getDiscordUrl(input: string) {
   return `https://discord.com/users/${encodeURIComponent(value)}`;
 }
 
-async function handleDiscordClick(discordInput: string, notify: (message: string) => void) {
+function handleDiscordClick(
+  discordInput: string,
+  setDiscordModal: (modal: { open: boolean; username: string }) => void,
+) {
   const value = discordInput.trim();
   if (!value) return;
 
@@ -70,13 +73,15 @@ async function handleDiscordClick(discordInput: string, notify: (message: string
     return;
   }
 
-  try {
-    await navigator.clipboard.writeText(value);
-    notify(`Copied Discord username '${value}' to clipboard!`);
-    window.open("https://discord.com/channels/@me", "_blank");
-  } catch (copyError) {
-    notify(copyError instanceof Error ? copyError.message : JSON.stringify(copyError));
-  }
+  // Copy to clipboard and show modal
+  navigator.clipboard.writeText(value).then(() => {
+    setDiscordModal({ open: true, username: value });
+    // Open Discord after 2.5 seconds
+    setTimeout(() => {
+      window.open("https://discord.com/channels/@me", "_blank");
+      setDiscordModal({ open: false, username: "" });
+    }, 2500);
+  });
 }
 
 function renderMessageContent(content: string): ReactNode[] {
@@ -147,6 +152,10 @@ export default function SquadPage() {
     { file: File; url: string }[]
   >([]);
   const [discordNotice, setDiscordNotice] = useState<string | null>(null);
+  const [discordModal, setDiscordModal] = useState<{ open: boolean; username: string }>({
+    open: false,
+    username: "",
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -384,7 +393,7 @@ export default function SquadPage() {
               <button
                 className="mt-6 block bg-[#5865F2] px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#4752c4]"
                 onClick={() =>
-                  void handleDiscordClick(lobby.discord ?? "", setDiscordNotice)
+                  handleDiscordClick(lobby.discord ?? "", setDiscordModal)
                 }
                 type="button"
               >
@@ -502,6 +511,34 @@ export default function SquadPage() {
           </section>
         </div>
       </div>
+
+      {discordModal.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md"
+          role="presentation"
+        >
+          <div
+            aria-labelledby="discord-modal-title"
+            aria-modal="true"
+            className="w-full max-w-md border border-zinc-700 bg-zinc-900 p-8 shadow-2xl"
+            role="dialog"
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold" id="discord-modal-title">
+                Discord ID Copied!
+              </h2>
+              <span className="text-green-400">✓</span>
+            </div>
+            <div className="mt-6 bg-zinc-950 p-4 font-mono text-sm text-emerald-400">
+              {discordModal.username}
+            </div>
+            <p className="mt-6 flex items-center gap-2 text-sm text-zinc-300">
+              Redirecting you to Discord to add friend...
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
