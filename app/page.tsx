@@ -41,30 +41,35 @@ function getDiscordUrl(input: string) {
   if (/^(?:discord\.gg|discord\.com)\//i.test(value)) {
     return `https://${value}`;
   }
-  return `https://discord.com/users/${encodeURIComponent(value)}`;
+  return null;
+}
+
+function isDiscordLink(input: string) {
+  return /discord\.gg|discord\.com\/invite|https?:\/\//i.test(input);
 }
 
 function handleDiscordClick(
   discordInput: string,
-  setDiscordModal: (modal: { open: boolean; username: string }) => void,
+  setDiscordModalOpen: (open: boolean) => void,
+  setDiscordToast: (message: string | null) => void,
 ) {
   const value = discordInput.trim();
   if (!value) return;
 
-  const isInvite = /discord\.gg|discord\.com\/invite|^https?:\/\//i.test(value);
-  if (isInvite) {
-    window.open(getDiscordUrl(value) ?? value, "_blank");
+  if (isDiscordLink(value)) {
+    setDiscordModalOpen(true);
+    setTimeout(() => {
+      window.open(getDiscordUrl(value) ?? value, "_blank");
+      setDiscordModalOpen(false);
+    }, 1500);
     return;
   }
 
-  // Copy to clipboard and show modal
   navigator.clipboard.writeText(value).then(() => {
-    setDiscordModal({ open: true, username: value });
-    // Open Discord after 2.5 seconds
+    setDiscordToast(`Copied Discord username: ${value}`);
     setTimeout(() => {
-      window.open("https://discord.com/channels/@me", "_blank");
-      setDiscordModal({ open: false, username: "" });
-    }, 2500);
+      setDiscordToast(null);
+    }, 3000);
   });
 }
 
@@ -103,10 +108,8 @@ export default function Home() {
   const [joiningLobbyId, setJoiningLobbyId] = useState<string | number | null>(
     null,
   );
-  const [discordModal, setDiscordModal] = useState<{ open: boolean; username: string }>({
-    open: false,
-    username: "",
-  });
+  const [discordToast, setDiscordToast] = useState<string | null>(null);
+  const [discordModalOpen, setDiscordModalOpen] = useState(false);
   const toast = {
     error: (message: string) => setToastMessage(message),
   };
@@ -576,7 +579,9 @@ export default function Home() {
             const gameTitle = stringValue(lobby.game_title, "Untitled game");
             const lobbyName = stringValue(lobby.lobby_name, "Untitled lobby");
             const discordValue = stringValue(lobby.discord, "");
-            const discordUrl = getDiscordUrl(discordValue);
+            const discordUrl = isDiscordLink(discordValue)
+              ? getDiscordUrl(discordValue)
+              : discordValue;
             const currentPlayers = Number(lobby.current_players ?? 0);
             const maxPlayers = Number(lobby.max_players ?? 0);
             const isSquadFull = currentPlayers >= maxPlayers;
@@ -642,10 +647,12 @@ export default function Home() {
                   {discordUrl ? (
                     <button
                       className="block border border-[#5865F2] px-4 py-2 text-center text-sm text-[#9aa5ff] transition-colors hover:bg-[#5865F2] hover:text-white"
-                      onClick={() => handleDiscordClick(discordValue, setDiscordModal)}
+                      onClick={() =>
+                        handleDiscordClick(discordValue, setDiscordModalOpen, setDiscordToast)
+                      }
                       type="button"
                     >
-                      {/^https?:\/\//i.test(discordValue) || /discord\.gg|discord\.com\/invite/i.test(discordValue)
+                      {isDiscordLink(discordValue)
                         ? "Join Discord Server"
                         : `Copy Discord Tag (${discordValue})`}
                     </button>
@@ -755,7 +762,7 @@ export default function Home() {
         </div>
       )}
 
-      {discordModal.open && (
+      {discordModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md"
           role="presentation"
@@ -768,18 +775,24 @@ export default function Home() {
           >
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold" id="discord-modal-title">
-                Discord ID Copied!
+                Redirecting to Discord Server...
               </h2>
-              <span className="text-green-400">✓</span>
             </div>
-            <div className="mt-6 bg-zinc-950 p-4 font-mono text-sm text-emerald-400">
-              {discordModal.username}
+            <div className="mt-6 flex justify-center" aria-label="Loading" role="status">
+              <span className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-700 border-t-[#5865F2]" />
             </div>
-            <p className="mt-6 flex items-center gap-2 text-sm text-zinc-300">
-              Redirecting you to Discord to add friend...
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            </p>
           </div>
+        </div>
+      )}
+
+      {discordToast && (
+        <div
+          aria-live="polite"
+          className="fixed bottom-5 right-5 z-50 border border-[#5865F2]/60 bg-zinc-900 px-4 py-3 text-sm text-white shadow-xl"
+          role="status"
+        >
+          <span className="mr-2 text-green-400">✓</span>
+          {discordToast}
         </div>
       )}
 
