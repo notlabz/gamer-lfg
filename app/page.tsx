@@ -440,9 +440,9 @@ export default function Home() {
   });
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-6 py-16 text-zinc-100 sm:px-10">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-10 flex items-end justify-between gap-6 border-b border-zinc-800 pb-6">
+    <main className="min-h-screen px-4 py-6 text-zinc-100 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-7xl">
+        <header className="glass-panel sticky top-4 z-50 mx-0 mb-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl px-5 py-4 sm:mx-4 sm:flex-nowrap sm:px-6 sm:py-3">
           <div>
             <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-emerald-400">
               Gamer LFG
@@ -458,7 +458,7 @@ export default function Home() {
               <span className="text-emerald-400">Connected</span>
             </p>
             <button
-              className="bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-emerald-300"
+              className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black shadow-[0_0_20px_rgba(16,185,129,0.18)] transition-colors hover:bg-emerald-400"
               onClick={() => {
                 if (user) {
                   setIsHostModalOpen(true);
@@ -476,12 +476,12 @@ export default function Home() {
               <div className="flex items-center gap-3 text-sm">
                 <div className="hidden text-right sm:block">
                   <p className="max-w-[180px] truncate text-zinc-300">{user.email}</p>
-                  <span className="inline-flex border border-emerald-400/50 px-2 py-0.5 text-xs text-emerald-400">
+                  <span className="inline-flex rounded-full border border-emerald-400/50 bg-emerald-400/10 px-2.5 py-0.5 text-xs text-emerald-300">
                     {role === "admin" ? "Admin" : "Member"}
                   </span>
                 </div>
                 <button
-                  className="border border-zinc-700 px-3 py-2 text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
                   onClick={() => void supabase.auth.signOut()}
                   type="button"
                 >
@@ -490,7 +490,7 @@ export default function Home() {
               </div>
             ) : (
               <button
-                className="border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
                 onClick={() => {
                   setAuthTab("login");
                   setIsSubmitted(false);
@@ -505,7 +505,7 @@ export default function Home() {
         </header>
 
         {!user ? (
-          <section className="relative overflow-hidden border border-zinc-800 bg-zinc-900 px-6 py-20 sm:px-12 sm:py-28">
+          <section className="glass-panel relative overflow-hidden rounded-3xl px-6 py-20 sm:px-12 sm:py-28">
             <div className="relative max-w-3xl">
               <p className="mb-5 text-sm font-medium uppercase tracking-[0.3em] text-emerald-400">
                 Your party is waiting
@@ -523,7 +523,7 @@ export default function Home() {
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <button
-                  className="bg-emerald-400 px-6 py-4 text-sm font-semibold text-zinc-950 transition-colors hover:bg-emerald-300"
+                  className="rounded-xl bg-emerald-500 px-6 py-4 text-sm font-semibold text-black shadow-[0_0_24px_rgba(16,185,129,0.18)] transition-colors hover:bg-emerald-400"
                   onClick={() => {
                     setAuthTab("login");
                     setIsSubmitted(false);
@@ -534,7 +534,7 @@ export default function Home() {
                   Sign In
                 </button>
                 <button
-                  className="border border-zinc-600 px-6 py-4 text-sm font-semibold text-zinc-100 transition-colors hover:border-emerald-400 hover:text-emerald-400"
+                  className="rounded-xl border border-white/15 bg-white/5 px-6 py-4 text-sm font-semibold text-zinc-100 transition-colors hover:border-emerald-400 hover:text-emerald-300"
                   onClick={() => {
                     setAuthTab("signup");
                     setIsSubmitted(false);
@@ -557,7 +557,7 @@ export default function Home() {
                 Search lobbies
               </label>
               <input
-                className="w-full border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400 sm:max-w-md"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-emerald-400 sm:max-w-md"
                 id="lobby-search"
                 onChange={(event) => setSearchTerm(event.target.value || "")}
                 placeholder="Search by game, lobby, mode, or platform"
@@ -595,7 +595,7 @@ export default function Home() {
 
             return (
               <article
-                className="border border-zinc-800 bg-zinc-900 p-5 transition-colors hover:border-emerald-500/60"
+                className="glass-card rounded-2xl p-5 transition-colors"
                 key={String(lobby.id ?? `${gameTitle}-${lobbyName}-${index}`)}
               >
                 <div className="flex items-start justify-between gap-4">
@@ -620,7 +620,7 @@ export default function Home() {
                 <dl className="mt-4 space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
                     <dt className="text-zinc-500">Mode</dt>
-                    <dd>{stringValue(lobby.game_mode, "Any")}</dd>
+                    <dd><span className="rounded-full border border-indigo-400/30 bg-indigo-400/10 px-2.5 py-1 text-xs font-medium text-indigo-200">{stringValue(lobby.game_mode, "Any")}</span></dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-zinc-500">Squad Size</dt>
@@ -630,11 +630,11 @@ export default function Home() {
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-zinc-500">Platform</dt>
-                    <dd>{stringValue(lobby.platform, "Any")}</dd>
+                    <dd><span className="rounded-full border border-cyan-400/25 bg-cyan-400/10 px-2.5 py-1 text-xs font-medium text-cyan-200">{stringValue(lobby.platform, "Any")}</span></dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-zinc-500">Voice</dt>
-                    <dd>{lobby.mic_required ? "Mic Required" : "No Mic"}</dd>
+                    <dd><span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${lobby.mic_required ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-zinc-600/50 bg-white/5 text-zinc-300"}`}>{lobby.mic_required ? "Mic Required" : "No Mic"}</span></dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-zinc-500">Discord</dt>
@@ -700,7 +700,7 @@ export default function Home() {
 
       {lobbyPendingDeletion && (
         <div
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 px-6 py-10"
+          className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 px-6 py-10 backdrop-blur-sm"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !deletingLobbyId) {
@@ -711,7 +711,7 @@ export default function Home() {
           <div
             aria-labelledby="delete-lobby-title"
             aria-modal="true"
-            className="w-full max-w-md border border-zinc-700 bg-zinc-900 p-6 shadow-2xl"
+            className="glass-panel w-full max-w-md rounded-2xl p-6 shadow-2xl"
             role="dialog"
           >
             <h2 className="text-xl font-semibold" id="delete-lobby-title">
@@ -722,7 +722,7 @@ export default function Home() {
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button
-                className="border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white"
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300 hover:border-white/20 hover:text-white"
                 disabled={Boolean(deletingLobbyId)}
                 onClick={() => setLobbyPendingDeletion(null)}
                 type="button"
@@ -730,7 +730,7 @@ export default function Home() {
                 Cancel
               </button>
               <button
-                className="bg-red-500 px-4 py-3 text-sm font-semibold text-white hover:bg-red-400 disabled:cursor-wait disabled:opacity-60"
+                className="rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white hover:bg-red-400 disabled:cursor-wait disabled:opacity-60"
                 disabled={Boolean(deletingLobbyId)}
                 onClick={() => void handleDelete(lobbyPendingDeletion)}
                 type="button"
@@ -764,13 +764,13 @@ export default function Home() {
 
       {discordModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-6 backdrop-blur-md"
           role="presentation"
         >
           <div
             aria-labelledby="discord-modal-title"
             aria-modal="true"
-            className="w-full max-w-md border border-zinc-700 bg-zinc-900 p-8 shadow-2xl"
+            className="glass-panel w-full max-w-md rounded-2xl p-8 shadow-2xl"
             role="dialog"
           >
             <div className="flex items-center gap-2">
@@ -788,7 +788,7 @@ export default function Home() {
       {discordToast && (
         <div
           aria-live="polite"
-          className="fixed bottom-5 right-5 z-50 border border-[#5865F2]/60 bg-zinc-900 px-4 py-3 text-sm text-white shadow-xl"
+          className="glass-panel fixed bottom-5 right-5 z-50 rounded-xl border-[#5865F2]/60 px-4 py-3 text-sm text-white shadow-xl"
           role="status"
         >
           <span className="mr-2 text-green-400">✓</span>
@@ -798,7 +798,7 @@ export default function Home() {
 
       {isAuthModalOpen && (
         <div
-          className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 px-6 py-10"
+          className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 px-6 py-10 backdrop-blur-sm"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setIsAuthModalOpen(false);
@@ -807,7 +807,7 @@ export default function Home() {
           <div
             aria-labelledby="auth-title"
             aria-modal="true"
-            className="w-full max-w-md border border-zinc-700 bg-zinc-900 p-6 shadow-2xl"
+            className="glass-panel w-full max-w-md rounded-2xl p-6 shadow-2xl"
             role="dialog"
           >
             <div className="mb-6 flex items-start justify-between gap-4">
@@ -853,7 +853,7 @@ export default function Home() {
               </div>
             )}
             {isSubmitted ? (
-              <div className="border border-emerald-400/40 bg-emerald-950/30 p-6">
+              <div className="rounded-2xl border border-emerald-400/40 bg-emerald-950/30 p-6">
                 <div className="mb-5 flex h-12 w-12 items-center justify-center border border-emerald-400/50 text-2xl text-emerald-400" aria-hidden="true">
                   ✉
                 </div>
@@ -869,7 +869,7 @@ export default function Home() {
                 {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <button
-                    className="bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:cursor-wait disabled:opacity-60"
+                    className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black disabled:cursor-wait disabled:opacity-60"
                     disabled={isResending}
                     onClick={() => void handleResendEmail()}
                     type="button"
@@ -877,7 +877,7 @@ export default function Home() {
                     {isResending ? "Resending..." : "Resend Email"}
                   </button>
                   <button
-                    className="border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white"
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-300 hover:border-white/20 hover:text-white"
                     onClick={() => {
                       setIsSubmitted(false);
                       setAuthTab("login");
@@ -895,7 +895,7 @@ export default function Home() {
                 Email
                 <input
                   autoComplete="email"
-                  className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
                   onChange={(event) => setAuthEmail(event.target.value || "")}
                   required
                   type="email"
@@ -906,7 +906,7 @@ export default function Home() {
                 Password
                 <input
                   autoComplete={authTab === "login" ? "current-password" : "new-password"}
-                  className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
                   minLength={6}
                   onChange={(event) => setAuthPassword(event.target.value || "")}
                   required
@@ -916,7 +916,7 @@ export default function Home() {
               </label>
               {error && <p className="text-sm text-red-400">{error}</p>}
               <button
-                className="w-full bg-emerald-400 px-4 py-3 font-semibold text-zinc-950 transition-colors hover:bg-emerald-300 disabled:cursor-wait disabled:opacity-60"
+                className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black transition-colors hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60"
                 disabled={isAuthenticating}
                 type="submit"
               >
@@ -934,7 +934,7 @@ export default function Home() {
 
       {isHostModalOpen && (
         <div
-          className="fixed inset-0 z-10 flex items-center justify-center bg-black/70 px-6 py-10"
+          className="fixed inset-0 z-10 flex items-center justify-center bg-black/70 px-6 py-10 backdrop-blur-sm"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setIsHostModalOpen(false);
@@ -943,7 +943,7 @@ export default function Home() {
           <div
             aria-labelledby="host-lobby-title"
             aria-modal="true"
-            className="w-full max-w-lg border border-zinc-700 bg-zinc-900 p-6 shadow-2xl"
+            className="glass-panel w-full max-w-lg rounded-2xl p-6 shadow-2xl"
             role="dialog"
           >
             <div className="mb-6 flex items-start justify-between gap-4">
@@ -968,7 +968,7 @@ export default function Home() {
               <label className="block text-sm text-zinc-300">
                 Game Title
                 <select
-                  className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
                   name="game_name"
                   onChange={(event) => setGameName(event.target.value || "")}
                   required
@@ -985,7 +985,7 @@ export default function Home() {
               <label className="block text-sm text-zinc-300">
                 Lobby Name / Description
                 <input
-                  className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
                   name="description"
                   onChange={(event) => setDescription(event.target.value || "")}
                   placeholder="Looking for a coordinated squad"
@@ -997,7 +997,7 @@ export default function Home() {
                 <label className="block text-sm text-zinc-300">
                   Game Mode
                   <select
-                    className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
                     name="mode"
                     onChange={(event) => setMode(event.target.value || "")}
                     required
@@ -1012,7 +1012,7 @@ export default function Home() {
                 <label className="block text-sm text-zinc-300">
                   Max Squad Size
                   <input
-                    className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
                     max={10}
                     min={2}
                     name="max_squad_size"
@@ -1026,7 +1026,7 @@ export default function Home() {
               <label className="block text-sm text-zinc-300">
                 Platform
                 <input
-                  className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
                   name="platform"
                   onChange={(event) => setPlatform(event.target.value || "")}
                   placeholder="PC, PlayStation, Xbox"
@@ -1047,7 +1047,7 @@ export default function Home() {
               <label className="block text-sm text-zinc-300">
                 Discord Handle / Invite Link
                 <input
-                  className="mt-2 w-full border border-zinc-700 bg-zinc-950 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
                   name="discord"
                   onChange={(event) => setDiscord(event.target.value || "")}
                   placeholder="discord.gg/invite or username#1234"
@@ -1056,7 +1056,7 @@ export default function Home() {
                 />
               </label>
               <button
-                className="w-full bg-emerald-400 px-4 py-3 font-semibold text-zinc-950 transition-colors hover:bg-emerald-300"
+                className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black transition-colors hover:bg-emerald-400"
                 disabled={isSubmitting}
                 type="submit"
               >
