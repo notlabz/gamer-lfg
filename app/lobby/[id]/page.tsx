@@ -47,7 +47,8 @@ type LobbyMessage = {
 const supabase = createClient();
 
 function displayName(profile: Profile | undefined, userId: string) {
-  return profile?.display_name || profile?.username || profile?.email || userId;
+  const name = profile?.display_name || profile?.username || profile?.email || userId;
+  return name.includes("@") ? name.split("@")[0] : name;
 }
 
 function getDiscordUrl(input: string) {
@@ -353,159 +354,64 @@ export default function SquadPage() {
   ) as string[];
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-6 py-10 text-zinc-100 sm:px-10">
-      <div className="mx-auto max-w-5xl">
-        <button
-          className="mb-8 text-sm text-zinc-400 hover:text-white"
-          onClick={() => router.push("/")}
-          type="button"
-        >
-          Back to lobbies
-        </button>
-        <header className="mb-8 border-b border-zinc-800 pb-6">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-400">
-            {lobby.game_title ?? "Squad room"}
-          </p>
-          <h1 className="mt-2 text-4xl font-semibold">{lobby.lobby_name}</h1>
-          <p className="mt-3 text-zinc-400">
-            {lobby.game_mode} · {Number(lobby.current_players ?? 0)} / {Number(lobby.max_players ?? 0)} players
-          </p>
-        </header>
+    <main className="relative min-h-screen overflow-hidden bg-[#0a0d14] px-4 py-5 text-zinc-100 sm:px-8 lg:px-12">
+      <div className="pointer-events-none absolute -left-40 top-0 h-[32rem] w-[32rem] rounded-full bg-indigo-600/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-32 bottom-0 h-[28rem] w-[28rem] rounded-full bg-cyan-500/10 blur-3xl" />
+      <div className="relative mx-auto flex max-w-7xl gap-4 lg:gap-6">
+        <aside className="hidden h-fit shrink-0 flex-col items-center gap-5 rounded-2xl border border-white/10 bg-white/5 px-3 py-5 backdrop-blur-md sm:flex">
+          <button aria-label="Back to lobbies" className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-500/20 text-lg text-indigo-200 transition hover:bg-indigo-500/40" onClick={() => router.push("/")} title="Back to lobbies" type="button">⌂</button>
+          <div className="h-px w-6 bg-white/10" />
+          <span aria-hidden="true" className="text-xl text-zinc-500">◈</span>
+          <span aria-hidden="true" className="text-xl text-indigo-300">◌</span>
+          <span aria-hidden="true" className="text-xl text-zinc-500">⚙</span>
+        </aside>
 
-        {error && <p className="mb-6 text-sm text-red-400">{error}</p>}
-        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-          <section className="border border-zinc-800 bg-zinc-900 p-5">
-            <h2 className="text-lg font-semibold">Teammates</h2>
-            <ul className="mt-4 space-y-3">
-              {memberIds.map((memberId) => (
-                <li className="flex items-center justify-between border-b border-zinc-800 pb-3 text-sm" key={memberId}>
-                  <span>{displayName(profiles.find((profile) => profile.id === memberId), memberId)}</span>
-                  <span className="text-xs text-emerald-400">
-                    {memberId === lobby.host_id ? "Host" : "Member"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <dl className="mt-8 space-y-3 border-t border-zinc-800 pt-5 text-sm">
-              <div className="flex justify-between gap-4"><dt className="text-zinc-500">Voice</dt><dd>{lobby.mic_required ? "Mic required" : "Mic optional"}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-zinc-500">Discord</dt><dd className="max-w-[65%] truncate text-right">{lobby.discord ?? "Not provided"}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-zinc-500">Platform</dt><dd>{lobby.platform ?? "Any"}</dd></div>
-            </dl>
-            {lobby.discord ? (
-              <button
-                className="mt-6 block bg-[#5865F2] px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#4752c4]"
-                onClick={() =>
-                  handleDiscordClick(lobby.discord ?? "", setDiscordModalOpen, setDiscordToast)
-                }
-                type="button"
-              >
-                {isDiscordLink(lobby.discord)
-                  ? "Join Discord Server"
-                  : `Copy Discord Tag (${lobby.discord})`}
-              </button>
-            ) : (
-              <span className="mt-6 block border border-zinc-700 px-4 py-3 text-center text-sm text-zinc-500">
-                No Discord Provided
-              </span>
-            )}
-          </section>
+        <div className="min-w-0 flex-1 rounded-3xl border border-white/10 bg-zinc-900/40 p-4 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-8">
+          <header className="relative mb-6 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-6 sm:px-7">
+            <div className="absolute right-4 top-1/2 grid h-24 w-24 -translate-y-1/2 place-items-center rounded-3xl border border-indigo-300/20 bg-indigo-500/10 text-4xl text-indigo-200 shadow-[0_0_45px_rgba(99,102,241,0.18)] sm:right-8">
+              ◇
+            </div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-indigo-300">{lobby.game_title ?? "Squad room"}</p>
+            <h1 className="mt-2 max-w-[calc(100%-7rem)] text-3xl font-semibold tracking-tight text-white sm:text-4xl">{lobby.lobby_name ?? "Untitled lobby"}</h1>
+            <p className="mt-3 text-sm text-zinc-400">{lobby.game_mode ?? "Ranked"} <span className="mx-2 text-zinc-600">•</span> {Number(lobby.current_players ?? 0)} / {Number(lobby.max_players ?? 0)} players</p>
+          </header>
 
-          <section className="flex h-[calc(100vh-250px)] min-h-[500px] max-h-[700px] flex-col border border-zinc-800 bg-zinc-900 p-5">
-            <div className="shrink-0">
-              <h2 className="text-lg font-semibold">Squad Chat</h2>
-              <p className="mt-1 text-sm text-zinc-500">Coordinate your next match.</p>
-            </div>
-            <div className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto border-y border-zinc-800 px-1 py-4 [scrollbar-color:#52525b_#18181b] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-600 [&::-webkit-scrollbar-track]:bg-zinc-950">
-              {messages.length === 0 && <p className="text-sm text-zinc-500">No messages yet.</p>}
-              {messages.map((chatMessage) => (
-                <article className="border border-zinc-800 bg-zinc-950 p-3" key={chatMessage.id}>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="truncate text-xs text-emerald-400">
-                      {chatMessage.user_email ||
-                        displayName(
-                          profiles.find((profile) => profile.id === chatMessage.user_id),
-                          chatMessage.user_id,
-                        )}
-                    </p>
-                    <time
-                      className="shrink-0 text-[11px] text-zinc-500"
-                      dateTime={chatMessage.created_at}
-                    >
-                      {new Date(chatMessage.created_at).toLocaleString()}
-                    </time>
-                  </div>
-                  <div className="mt-1 whitespace-pre-wrap text-sm text-zinc-200">
-                    {renderMessageContent(chatMessage.message)}
-                  </div>
-                </article>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-            <form className="mt-4 flex shrink-0 gap-3" onSubmit={handleSendMessage}>
-              <input
-                accept="image/*,.gif"
-                className="hidden"
-                onChange={handleFileInputChange}
-                ref={fileInputRef}
-                type="file"
-              />
-              <div className="min-w-0 flex-1">
-                {attachmentPreviews.length > 0 && (
-                  <div className="mb-2 flex gap-2 overflow-x-auto">
-                    {attachmentPreviews.map((preview) => (
-                      <div className="relative shrink-0" key={`${preview.file.name}-${preview.file.lastModified}`}>
-                        <img
-                          alt={`Preview of ${preview.file.name}`}
-                          className="h-16 w-16 rounded object-cover"
-                          src={preview.url}
-                        />
-                        <button
-                          aria-label={`Remove ${preview.file.name}`}
-                          className="absolute right-0 top-0 bg-zinc-950/80 px-1 text-xs text-white"
-                          onClick={() =>
-                            (() => {
-                              URL.revokeObjectURL(preview.url);
-                              setAttachments((current) =>
-                                current.filter((file) => file !== preview.file),
-                              );
-                              setAttachmentPreviews((current) =>
-                                current.filter((item) => item.file !== preview.file),
-                              );
-                            })()
-                          }
-                          type="button"
-                        >
-                          x
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <textarea
-                  className="min-h-11 w-full resize-none border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-400"
-                  onChange={(event) => setMessageInput(event.target.value || "")}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
-                  placeholder="Message your squad"
-                  rows={1}
-                  value={messageInput}
-                />
+          {error && <p className="mb-5 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300">{error}</p>}
+          <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Squad</p><h2 className="mt-1 text-xl font-semibold">Teammates</h2></div>
+                <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-medium text-amber-200">Gold 2</span>
               </div>
-              <button
-                aria-label="Attach image or GIF"
-                className="border border-zinc-700 px-3 text-lg text-zinc-300 transition-colors hover:border-emerald-400 hover:text-emerald-400 disabled:cursor-wait disabled:opacity-50"
-                disabled={isUploading || sending}
-                onClick={() => fileInputRef.current?.click()}
-                title={isUploading ? "Uploading attachment" : "Attach image or GIF"}
-                type="button"
-              >
-                {isUploading ? "..." : "Attach"}
-              </button>
-              <button className="bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 disabled:opacity-50" disabled={sending || isUploading || (!messageInput.trim() && attachments.length === 0)} type="submit">
-                {sending ? "Sending..." : "Send"}
-              </button>
-            </form>
-          </section>
+              <ul className="mt-6 space-y-2">
+                {memberIds.map((memberId) => {
+                  const profile = profiles.find((candidate) => candidate.id === memberId);
+                  return <li className="flex items-center justify-between rounded-xl border border-white/5 bg-black/10 px-3 py-3" key={memberId}>
+                    <div className="flex min-w-0 items-center gap-3"><span className="relative h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"><span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/50" /></span><span className="truncate text-sm font-medium">{displayName(profile, memberId)}</span></div>
+                    <span className="ml-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{memberId === lobby.host_id ? "Host" : "Member"}</span>
+                  </li>;
+                })}
+              </ul>
+              <div className="mt-6 flex flex-wrap gap-2"><span className="rounded-full bg-indigo-400/10 px-3 py-1 text-xs text-indigo-200">Ranked</span><span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-400">Chill comms</span></div>
+              <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-5 text-sm"><div><dt className="text-xs text-zinc-500">Voice</dt><dd className="mt-1 text-zinc-200">{lobby.mic_required ? "Mic required" : "Mic optional"}</dd></div><div><dt className="text-xs text-zinc-500">Platform</dt><dd className="mt-1 text-zinc-200">{lobby.platform ?? "Any"}</dd></div><div><dt className="text-xs text-zinc-500">Region</dt><dd className="mt-1 text-zinc-200">Global</dd></div><div><dt className="text-xs text-zinc-500">Discord</dt><dd className="mt-1 max-w-full truncate text-zinc-200">{lobby.discord ?? "Not provided"}</dd></div></dl>
+              {lobby.discord ? <button className="mt-6 w-full rounded-xl border border-indigo-400/30 bg-indigo-500/20 px-4 py-3 text-sm font-semibold text-indigo-100 shadow-[0_0_20px_rgba(99,102,241,0.08)] transition hover:border-indigo-300/60 hover:bg-indigo-500/35 hover:shadow-[0_0_25px_rgba(99,102,241,0.2)]" onClick={() => handleDiscordClick(lobby.discord ?? "", setDiscordModalOpen, setDiscordToast)} type="button">{isDiscordLink(lobby.discord) ? "Join Discord Server" : `Copy Discord Tag (${lobby.discord})`}</button> : <span className="mt-6 block w-full rounded-xl border border-white/10 px-4 py-3 text-center text-sm text-zinc-500">No Discord Provided</span>}
+            </section>
+
+            <section className="flex min-h-[32rem] flex-col rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
+              <div className="shrink-0"><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Live channel</p><h2 className="mt-1 text-xl font-semibold">Squad Chat</h2><p className="mt-1 text-sm text-zinc-500">Coordinate your next match.</p></div>
+              <div className="mt-5 min-h-0 flex-1 space-y-4 overflow-y-auto border-y border-white/10 px-1 py-5 [scrollbar-color:#52525b_transparent] [scrollbar-width:thin]">
+                {messages.length === 0 && <p className="text-sm text-zinc-500">No messages yet. Start the strategy.</p>}
+                {messages.map((chatMessage) => { const isHost = chatMessage.user_id === lobby.host_id; return <article className={`max-w-[92%] rounded-2xl border p-3 ${isHost ? "border-indigo-500/30 bg-indigo-600/20" : "border-white/10 bg-zinc-800/80"}`} key={chatMessage.id}><div className="flex items-center justify-between gap-3"><p className="truncate text-xs font-semibold text-indigo-200">{displayName(profiles.find((profile) => profile.id === chatMessage.user_id), chatMessage.user_email ?? chatMessage.user_id)}</p><time className="shrink-0 text-[10px] text-zinc-500" dateTime={chatMessage.created_at}>{new Date(chatMessage.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></div><div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-200">{renderMessageContent(chatMessage.message)}</div></article>; })}
+                <div ref={messagesEndRef} />
+              </div>
+              <form className="mt-4 flex shrink-0 items-end gap-2" onSubmit={handleSendMessage}>
+                <input accept="image/*,.gif" className="hidden" onChange={handleFileInputChange} ref={fileInputRef} type="file" />
+                <div className="min-w-0 flex-1">{attachmentPreviews.length > 0 && <div className="mb-2 flex gap-2 overflow-x-auto">{attachmentPreviews.map((preview) => <div className="relative shrink-0" key={`${preview.file.name}-${preview.file.lastModified}`}><img alt={`Preview of ${preview.file.name}`} className="h-14 w-14 rounded-lg object-cover" src={preview.url} /><button aria-label={`Remove ${preview.file.name}`} className="absolute right-0 top-0 rounded-bl bg-zinc-950/80 px-1 text-xs text-white" onClick={() => { URL.revokeObjectURL(preview.url); setAttachments((current) => current.filter((file) => file !== preview.file)); setAttachmentPreviews((current) => current.filter((item) => item.file !== preview.file)); }} type="button">×</button></div>)}</div>}<textarea className="min-h-11 w-full resize-none rounded-full border border-white/10 bg-zinc-900/80 px-5 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-indigo-400/60" onChange={(event) => setMessageInput(event.target.value || "")} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="Message your squad" rows={1} value={messageInput} /></div>
+                <button aria-label="Attach image or GIF" className="rounded-full border border-white/10 px-3 py-2.5 text-xs text-zinc-400 transition hover:border-indigo-400/50 hover:text-indigo-200 disabled:cursor-wait disabled:opacity-50" disabled={isUploading || sending} onClick={() => fileInputRef.current?.click()} title={isUploading ? "Uploading attachment" : "Attach image or GIF"} type="button">{isUploading ? "..." : "Attach"}</button>
+                <button className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:from-indigo-400 hover:to-violet-400 disabled:opacity-50" disabled={sending || isUploading || (!messageInput.trim() && attachments.length === 0)} type="submit">{sending ? "Sending..." : "Send"}</button>
+              </form>
+            </section>
+          </div>
         </div>
       </div>
 
