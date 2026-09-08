@@ -34,3 +34,29 @@
   border-color: rgba(16, 185, 129, 0.4);
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
 }
+
+/* Custom Cyberpunk/Esports Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 13, 20, 0.6);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+/* Neon Text Glow Helpers */
+.neon-text-violet {
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+.neon-text-emerald {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
