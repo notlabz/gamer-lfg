@@ -13,6 +13,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/client";
+import { getDisplayName } from "@/utils/display-name";
 
 type Lobby = {
   id: string;
@@ -45,11 +46,6 @@ type LobbyMessage = {
 };
 
 const supabase = createClient();
-
-function displayName(profile: Profile | undefined, userId: string) {
-  const name = profile?.display_name || profile?.username || profile?.email || userId;
-  return name.includes("@") ? name.split("@")[0] : name;
-}
 
 function getDiscordUrl(input: string) {
   const value = input.trim();
@@ -387,7 +383,7 @@ export default function SquadPage() {
                 {memberIds.map((memberId) => {
                   const profile = profiles.find((candidate) => candidate.id === memberId);
                   return <li className="flex items-center justify-between rounded-xl border border-white/5 bg-black/10 px-3 py-3" key={memberId}>
-                    <div className="flex min-w-0 items-center gap-3"><span className="relative h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"><span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/50" /></span><span className="truncate text-sm font-medium">{displayName(profile, memberId)}</span></div>
+                    <div className="flex min-w-0 items-center gap-3"><span className="relative h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"><span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/50" /></span><span className="truncate text-sm font-medium">{getDisplayName(profile, memberId)}</span></div>
                     <span className="ml-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{memberId === lobby.host_id ? "Host" : "Member"}</span>
                   </li>;
                 })}
@@ -401,7 +397,7 @@ export default function SquadPage() {
               <div className="shrink-0"><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Live channel</p><h2 className="mt-1 text-xl font-semibold">Squad Chat</h2><p className="mt-1 text-sm text-zinc-500">Coordinate your next match.</p></div>
               <div className="mt-5 min-h-0 flex-1 space-y-4 overflow-y-auto border-y border-white/10 px-1 py-5 [scrollbar-color:#52525b_transparent] [scrollbar-width:thin]">
                 {messages.length === 0 && <p className="text-sm text-zinc-500">No messages yet. Start the strategy.</p>}
-                {messages.map((chatMessage) => { const isHost = chatMessage.user_id === lobby.host_id; return <article className={`max-w-[92%] rounded-2xl border p-3 ${isHost ? "border-indigo-500/30 bg-indigo-600/20" : "border-white/10 bg-zinc-800/80"}`} key={chatMessage.id}><div className="flex items-center justify-between gap-3"><p className="truncate text-xs font-semibold text-indigo-200">{displayName(profiles.find((profile) => profile.id === chatMessage.user_id), chatMessage.user_email ?? chatMessage.user_id)}</p><time className="shrink-0 text-[10px] text-zinc-500" dateTime={chatMessage.created_at}>{new Date(chatMessage.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></div><div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-200">{renderMessageContent(chatMessage.message)}</div></article>; })}
+                {messages.map((chatMessage) => { const isHost = chatMessage.user_id === lobby.host_id; const profile = profiles.find((candidate) => candidate.id === chatMessage.user_id); return <article className={`max-w-[92%] rounded-2xl border p-3 ${isHost ? "border-indigo-500/30 bg-indigo-600/20" : "border-white/10 bg-zinc-800/80"}`} key={chatMessage.id}><div className="flex items-center justify-between gap-3"><p className="truncate text-xs font-semibold text-indigo-200">{getDisplayName(profile ?? { email: chatMessage.user_email }, chatMessage.user_id)}</p><time className="shrink-0 text-[10px] text-zinc-500" dateTime={chatMessage.created_at}>{new Date(chatMessage.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></div><div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-200">{renderMessageContent(chatMessage.message)}</div></article>; })}
                 <div ref={messagesEndRef} />
               </div>
               <form className="mt-4 flex shrink-0 items-end gap-2" onSubmit={handleSendMessage}>

@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { getDisplayName } from "@/utils/display-name";
 
 type Lobby = Record<string, unknown> & {
   id?: string | number;
@@ -100,6 +101,7 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "signup">("login");
   const [authEmail, setAuthEmail] = useState("");
+  const [authUsername, setAuthUsername] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -218,7 +220,7 @@ export default function Home() {
         max_players: Number(max_squad_size),
         current_players: 1,
         status: "active",
-        discord: discord.trim(),
+        discord: discord.trim() || null,
       });
 
       if (insertError) throw insertError;
@@ -268,6 +270,7 @@ export default function Home() {
       }
 
       setAuthEmail("");
+      setAuthUsername("");
       setAuthPassword("");
       setIsAuthModalOpen(false);
       return;
@@ -276,6 +279,11 @@ export default function Home() {
     const { data, error: signupError } = await supabase.auth.signUp({
       email: authEmail,
       password: authPassword,
+      options: {
+        data: {
+          username: authUsername.trim(),
+        },
+      },
     });
 
     setIsAuthenticating(false);
@@ -475,7 +483,7 @@ export default function Home() {
             {user ? (
               <div className="flex items-center gap-3 text-sm">
                 <div className="hidden text-right sm:block">
-                  <p className="max-w-[180px] truncate text-zinc-300">{user.email}</p>
+                  <p className="max-w-[180px] truncate text-zinc-300">{getDisplayName(user)}</p>
                   <span className="inline-flex rounded-full border border-emerald-400/50 bg-emerald-400/10 px-2.5 py-0.5 text-xs text-emerald-300">
                     {role === "admin" ? "Admin" : "Member"}
                   </span>
@@ -891,6 +899,19 @@ export default function Home() {
               </div>
             ) : (
             <form className="space-y-4" onSubmit={handleAuthSubmit}>
+              {authTab === "signup" && (
+                <label className="block text-sm text-zinc-300">
+                  Username
+                  <input
+                    autoComplete="username"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-emerald-400"
+                    onChange={(event) => setAuthUsername(event.target.value || "")}
+                    required
+                    type="text"
+                    value={authUsername}
+                  />
+                </label>
+              )}
               <label className="block text-sm text-zinc-300">
                 Email
                 <input
@@ -1051,7 +1072,6 @@ export default function Home() {
                   name="discord"
                   onChange={(event) => setDiscord(event.target.value || "")}
                   placeholder="discord.gg/invite or username#1234"
-                  required
                   value={discord}
                 />
               </label>
